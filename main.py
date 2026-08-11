@@ -12,7 +12,7 @@ def run():
     fileOption = mainmenu_start
 
     renderStart = T.perf_counter()
-    lastBlinkTime = renderStart
+    lastVisibleTime = renderStart
     visible = True
     changed = False
     while(True):
@@ -23,20 +23,20 @@ def run():
                 fileOption = mainmenu_start
                 changed = True
                 visible = True
-                lastBlinkTime = T.perf_counter()
+                lastVisibleTime = T.perf_counter()
             elif( key == b"s" and fileOption!=mainmenu_help):
                 fileOption = mainmenu_help
                 changed = True
                 visible = True
-                lastBlinkTime = T.perf_counter()
+                lastVisibleTime = T.perf_counter()
             elif( key == b'\x1b'):
                 print("\033[H\033[J", end="")
                 return
 
         now = T.perf_counter()
-        if(now - lastBlinkTime >= 0.5):
+        if(now - lastVisibleTime >= 0.5):
             visible = not visible
-            lastBlinkTime = now
+            lastVisibleTime = now
             changed = True
 
 
