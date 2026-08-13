@@ -42,11 +42,11 @@ def run():
 
         if(visible and changed):
             print("\033[H\033[J", end="")
-            print(fileOption , end=" ")
+            print(fileOption , end="")
             changed = False
         elif((not visible) and changed):
             print("\033[H\033[J", end="")
-            print(mainmenu_nill , end=" ")
+            print(mainmenu_nill , end="")
             changed = False
 
 
