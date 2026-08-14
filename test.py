@@ -4,7 +4,7 @@ import _main_menu as m
 import helpers as h
 import sys
 from enum import Enum
-
+import shutil as shell
 
 class Game:
 
@@ -14,9 +14,14 @@ class Game:
         Pause = 3, 
     
     def __init__(self):
+        self.importTextures(arrow="Arrow.txt" , main_menu_nill="MainMenuNill.txt")
         self.__gameState = self.GameState.MainMenu
+        self.__StateToScenes = {}
+        self.__StateToScenes[self.GameState.MainMenu] = m.MainMenu()
 
-
+    def getCurrentScene(self):
+        return self.__StateToScenes[self.__gameState]
+    
     def importTextures(self , **kwargs):
         for textureName , filepath in kwargs.items():
             if( textureName in h.Sprite.allTextures ):
@@ -36,21 +41,19 @@ class Game:
 
 
     def run(self):
-        self.importTextures(arrow="Arrow.txt" , main_menu_nill="MainMenuNill.txt")
-        main_menu = m.MainMenu()
         loopStart = T.perf_counter()
         while(True):
             frameStart = T.perf_counter()
 
+            resize=h.Sprite.handleTerminalSizeChange(terminalSize=tuple(shell.get_terminal_size()) , time=(T.perf_counter() - loopStart) )
             while( Input.kbhit()):
                 key = Input.getch()
                 if( key == b'\x1b'):
                     print("\033[H\033[J", end="")
                     return
-                main_menu.handleInput(input=key , time=(T.perf_counter() - loopStart))
-
-            main_menu.update(time=(T.perf_counter()- loopStart))
-            main_menu.render()
+                self.__StateToScenes[self.__gameState].handleInput(input=key , time=(T.perf_counter() - loopStart))
+            self.__StateToScenes[self.__gameState].update(time=(T.perf_counter()- loopStart))
+            self.__StateToScenes[self.__gameState].render(forced=resize)
             print(f"\x1b[162;1H", end="")
             sys.stdout.flush()
             frameEnd = T.perf_counter()

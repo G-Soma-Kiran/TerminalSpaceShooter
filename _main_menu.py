@@ -25,8 +25,10 @@ class MainMenu:
                 self.__lastVisibleTime = time
             elif(input == b"a"):
                 self.visual.setTextureRect(textureRectPosition=(3 , 1))
+                self.__lastVisibleTime = time
             elif(input == b"d"):
                 self.visual.setTextureRect(textureRectPosition=(1 , 1))
+                self.__lastVisibleTime = time
                 
 
         def update(self , * , time):
@@ -34,8 +36,8 @@ class MainMenu:
                 self.visual.toggleVisibility()
                 self.__lastVisibleTime = time
 
-        def render(self):
-            self.visual.render() 
+        def render(self , * , forced):
+            self.visual.render(forced=forced) 
 
 
                     
@@ -62,6 +64,6 @@ class MainMenu:
     def update(self , * , time):
         self.__arrow.update(time=time)
 
-    def render(self):
-        self.visual.render()
-        self.__arrow.render()
+    def render(self , * , forced):
+        self.visual.render(forced=forced)
+        self.__arrow.render(forced=forced)
