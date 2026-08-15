@@ -14,6 +14,8 @@ class MainMenu:
                 for j in range(1 , 8):
                     temp[(i , j)] =  "\x1b[38;2;255;255;0m"
             self.visual.setColorRegister(colorRegister=temp)
+            # self.visual.setAnimation(animationName="LeftRight")
+            # self.visual.setAnimationSpeed(speedInFps=2)
             self.__initTrackerVariables()
 
         def handleInput(self , * ,input , time):
@@ -35,6 +37,9 @@ class MainMenu:
             if( time - self.__lastVisibleTime >= 0.59):
                 self.visual.toggleVisibility()
                 self.__lastVisibleTime = time
+            # currentPos = self.visual.getPosition()
+            # self.visual.setPosition((currentPos[0] , currentPos[1] + 1))
+            # self.visual.playAnimation(time=time)
 
         def render(self , * , forced):
             self.visual.render(forced=forced) 
@@ -51,7 +56,7 @@ class MainMenu:
     def __init__(self):
         temp = {}
         for i in range(1 , 33):
-            for j in range(1 , 165):
+            for j in range(1 , 165): 
                 temp[(i , j)] = "\x1b[0m"
       
         self.visual = h.Sprite("main_menu_nill" , colorRegister=temp , textureRectPosition=(1 , 1) , dimensions=(162 , 31))

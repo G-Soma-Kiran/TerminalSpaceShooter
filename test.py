@@ -14,13 +14,17 @@ class Game:
         Pause = 3, 
     
     def __init__(self):
+        self.__frameNumber = 0
         self.importTextures(arrow="Arrow.txt" , main_menu_nill="MainMenuNill.txt")
+        # h.Sprite.createAnimation(animationName="LeftRight")
+        # h.Sprite.addFrame(animationName="LeftRight" , textureName="arrow" , colorRegister={} , textureRect=(1 ,1) , dimensions=(7 , 1))
+        # h.Sprite.addFrame(animationName="LeftRight" , textureName="arrow" , colorRegister={} , textureRect=(3 ,1) , dimensions=(7 , 1))
         self.__gameState = self.GameState.MainMenu
-        self.__StateToScenes = {}
-        self.__StateToScenes[self.GameState.MainMenu] = m.MainMenu()
+        self.__gameStateToScenes = {}
+        self.__gameStateToScenes[self.GameState.MainMenu] = m.MainMenu()
 
     def getCurrentScene(self):
-        return self.__StateToScenes[self.__gameState]
+        return self.__gameStateToScenes[self.__gameState]
     
     def importTextures(self , **kwargs):
         for textureName , filepath in kwargs.items():
@@ -42,8 +46,12 @@ class Game:
 
     def run(self):
         loopStart = T.perf_counter()
+        previousTime = loopStart
         while(True):
             frameStart = T.perf_counter()
+            currentTime = frameStart
+            dt = currentTime - previousTime
+            previousTime = currentTime
 
             resize=h.Sprite.handleTerminalSizeChange(terminalSize=tuple(shell.get_terminal_size()) , time=(T.perf_counter() - loopStart) )
             while( Input.kbhit()):
@@ -51,14 +59,19 @@ class Game:
                 if( key == b'\x1b'):
                     print("\033[H\033[J", end="")
                     return
-                self.__StateToScenes[self.__gameState].handleInput(input=key , time=(T.perf_counter() - loopStart))
-            self.__StateToScenes[self.__gameState].update(time=(T.perf_counter()- loopStart))
-            self.__StateToScenes[self.__gameState].render(forced=resize)
+                self.getCurrentScene().handleInput(input=key , time=(T.perf_counter() - loopStart))
+            self.getCurrentScene().update(time=(T.perf_counter()- loopStart))
+            self.getCurrentScene().render(forced=resize)
             print(f"\x1b[162;1H", end="")
+            if(self.__frameNumber%60 == 0):
+                print(f"{1/dt : .2f}" , end="")
             sys.stdout.flush()
+
             frameEnd = T.perf_counter()
+            
             if((frameEnd - frameStart) > 0 and (frameEnd - frameStart) < 0.016 ):
                 T.sleep(0.016 - (frameEnd - frameStart))
+            self.__frameNumber+=1
 
 
 

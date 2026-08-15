@@ -8,6 +8,19 @@ class Sprite:
     __cooldownTimeForRedraw = None
     __hold = False
 
+    allAnimations = {}
+
+    @classmethod
+    def createAnimation(cls , * , animationName ):
+        if(animationName in cls.allAnimations.keys()):
+            raise ValueError(f"{animationName} is already in Sprite.allAnimations")
+
+        cls.allAnimations[animationName] = []
+
+    @classmethod
+    def addFrame(cls , * , animationName , textureName , colorRegister , textureRect , dimensions):
+        cls.allAnimations[animationName].append((textureName , colorRegister , textureRect , dimensions))
+
     @classmethod
     def handleTerminalSizeChange(cls , * ,  terminalSize , time):
         if(terminalSize != cls.__currentTerminalSize):
@@ -61,6 +74,11 @@ class Sprite:
         self.__visible = True
         self.__visibilityChanged = True
 
+        self.__currentAnimationName = None
+        self.__currentAnimationSpeed = 24
+        self.__previousFrameRenderTime = 0
+        self.__currentAnimationFrameNumber = 0
+
     def setPosition(self , coords):
         if( Sprite.__hold) : return
 
@@ -70,6 +88,9 @@ class Sprite:
             self.__changed = True
         else:
             return
+
+    def getPosition(self):
+        return self.__position
 
     def setTexture(self , textureName):
         if( Sprite.__hold) : return
@@ -114,6 +135,38 @@ class Sprite:
         else:
             return
 
+    def setAnimation(self , * , animationName):
+        if( Sprite.__hold) : return
+
+        self.__currentAnimationName = animationName
+        self.__currentAnimationFrameNumber = 0
+
+    def setAnimationSpeed(self, * , speedInFps):
+        if( Sprite.__hold) : return
+
+        self.__currentAnimationSpeed = speedInFps
+        self.__currentAnimationFrameTime = 1/speedInFps
+
+    def playAnimation(self , * , time):
+        if( Sprite.__hold) : return
+
+        if(self.__currentAnimationName == None):
+            raise ValueError(f"No animation was set")
+
+        if(time - self.__previousFrameRenderTime >= self.__currentAnimationFrameTime):
+            currentAnimation = Sprite.allAnimations[self.__currentAnimationName]
+            totalFrames = len(currentAnimation)
+            self.__currentAnimationFrameNumber = (self.__currentAnimationFrameNumber + 1)% totalFrames
+            currentFrame = currentAnimation[self.__currentAnimationFrameNumber]
+            self.setTexture(currentFrame[0])
+            self.setColorRegister(colorRegister=currentFrame[1])
+            self.setTextureRect(textureRectPosition=currentFrame[2])
+            self.setTextureRectDimensions(dimensions=currentFrame[3])
+            self.__previousFrameRenderTime = time
+
+        return self.__currentAnimationFrameNumber
+
+
     def toggleVisibility(self):
         if( Sprite.__hold) : return
 
@@ -143,7 +196,6 @@ class Sprite:
             self.__previousColorRegister = self.__texture.colorRegister
             return
 
-        # print(f"\x1b[{self.__previousRenderPosition[0]};{self.__previousRenderPosition[1]}H" , end = "")
 
 
         print("\x1b[38;2;24;24;24m" , end = "")
@@ -156,7 +208,6 @@ class Sprite:
         terminalOffsetX , terminalOffsetY = (Sprite.__desiredTerminalSize[0] - Sprite.__currentTerminalSize[0] , Sprite.__desiredTerminalSize[1] - Sprite.__currentTerminalSize[1] )
         for i in range(row , row + height + 1 ):
             if(self.__previousRenderPosition[0]+i - row - terminalOffsetY <= 0) : continue
-            # print(f"\x1b[{self.__previousRenderPosition[0]+i - row};{self.__previousRenderPosition[1]}H", end="")
             for j in range(col , col + width + 1):
                 if(self.__previousRenderPosition[1]+j - col - terminalOffsetX <= 0) : continue
                 print(f"\x1b[{self.__previousRenderPosition[0]+i - row -terminalOffsetY};{self.__previousRenderPosition[1]+j - col - terminalOffsetX}H", end="")
@@ -166,7 +217,6 @@ class Sprite:
     def eraseCurrent(self):
         if( Sprite.__hold) : return
 
-        # print(f"\x1b[{self.__position[0]};{self.__position[1]}H" , end = "")
         print("\x1b[38;2;24;24;24m" , end = "")
         row , col = self.__texture.textureRectPosition
         width , height= self.__texture.dimensions
@@ -176,7 +226,6 @@ class Sprite:
         terminalOffsetX , terminalOffsetY = (Sprite.__desiredTerminalSize[0] - Sprite.__currentTerminalSize[0] , Sprite.__desiredTerminalSize[1] - Sprite.__currentTerminalSize[1] )
         for i in range(row , row + height + 1 ):
             if(self.__position[0]+i - row - terminalOffsetY <= 0 ) : continue
-            # print(f"\x1b[{self.__position[0]+i - row};{self.__position[1]}H", end="")
             for j in range(col , col + width + 1):
                 if(self.__position[1]+j - col - terminalOffsetX <= 0) : continue
                 print(f"\x1b[{self.__position[0]+i - row - terminalOffsetY};{self.__position[1]+j - col - terminalOffsetX}H", end="")
@@ -192,7 +241,6 @@ class Sprite:
             if(self.__changed):
                 self.erasePrevious()
 
-            # print(f"\x1b[{self.__position[0]};{self.__position[1]}H" , end = "")
             row , col = self.__texture.textureRectPosition
             width , height= self.__texture.dimensions
             row-=1
@@ -201,7 +249,6 @@ class Sprite:
             terminalOffsetX , terminalOffsetY = (Sprite.__desiredTerminalSize[0] - Sprite.__currentTerminalSize[0] , Sprite.__desiredTerminalSize[1] - Sprite.__currentTerminalSize[1] )
             for i in range(row , row + height + 1 ):
                 if(self.__position[0]+i - row - terminalOffsetY <= 0 ) : continue
-                # print(f"\x1b[{self.__position[0]+i - row};{self.__position[1]}H", end="")
                 for j in range(col , col + width + 1):
                     if(self.__position[1]+j - col - terminalOffsetX <= 0) : continue
                     print(f"\x1b[{self.__position[0]+i - row - terminalOffsetY};{self.__position[1]+j - col - terminalOffsetX}H", end="")
@@ -213,7 +260,6 @@ class Sprite:
 
         elif(forced or self.__visibilityChanged):
             if(self.__visible):
-                # print(f"\x1b[{self.__position[0]};{self.__position[1]}H" , end = "")
                 row , col = self.__texture.textureRectPosition
                 width , height= self.__texture.dimensions
                 row-=1
@@ -222,7 +268,6 @@ class Sprite:
                 terminalOffsetX , terminalOffsetY = (Sprite.__desiredTerminalSize[0] - Sprite.__currentTerminalSize[0] , Sprite.__desiredTerminalSize[1] - Sprite.__currentTerminalSize[1] )
                 for i in range(row , row + height + 1 ):
                     if(self.__position[0]+i - row - terminalOffsetY <= 0 ) : continue
-                    # print(f"\x1b[{self.__position[0]+i - row};{self.__position[1]}H", end="")
                     for j in range(col , col + width + 1):
                         if(self.__position[1]+j - col - terminalOffsetX <= 0) : continue
                         print(f"\x1b[{self.__position[0]+i - row - terminalOffsetY};{self.__position[1]+j - col - terminalOffsetX}H", end="")
