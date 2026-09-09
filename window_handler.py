@@ -1,5 +1,5 @@
 class WindowHandler:
-    def __init__(self):
+    def __init__(self):  
         self.__previousRenderMap = None
         self.__currentRenderMap = {}
         self.__desiredTerminalSize = (162 , 32)
@@ -7,20 +7,25 @@ class WindowHandler:
         self.__cooldownTimeForRedraw = None
         self.__hold = False
 
+
     def handleOccupiedCoords(self , * , occupiedCoords):
-        terminalOffsetX , terminalOffsetY = (self.__desiredTerminalSize[0] - self.__currentTerminalSize[0] , self.__desiredTerminalSize[1] - self.__currentTerminalSize[1])
+        desiredWidth , desiredHeight = self.__desiredTerminalSize
+        currentWidth , currentHeight = self.__currentTerminalSize
+
+        rowOffset = (currentHeight - desiredHeight) // 2
+        colOffset = (currentWidth - desiredWidth) // 2
+
         for coord , val in occupiedCoords.items():
-            terminalRelatedX = coord[0] - terminalOffsetY
-            terminalRelatedY = coord[1] - terminalOffsetX
+            terminalRelatedX = coord[0] + rowOffset
+            terminalRelatedY = coord[1] + colOffset
 
-            if( terminalRelatedX <= 0 or terminalRelatedY <= 0) : continue
+            if(terminalRelatedX <= 0 or terminalRelatedX > currentHeight): continue
+            if(terminalRelatedY <= 0 or terminalRelatedY > currentWidth): continue
 
-            if( self.__currentRenderMap.get((terminalRelatedX , terminalRelatedY)) != None ):
-                if(self.__currentRenderMap.get((terminalRelatedX , terminalRelatedY))[2] <= val[2]):
-                    self.__currentRenderMap[(terminalRelatedX , terminalRelatedY)] = val
-            else:
-                self.__currentRenderMap[(terminalRelatedX , terminalRelatedY)] = val
-            
+            key = (terminalRelatedX , terminalRelatedY)
+            existing = self.__currentRenderMap.get(key)
+            if(existing == None or existing[2] <= val[2]):
+                self.__currentRenderMap[key] = val  
     
     
     

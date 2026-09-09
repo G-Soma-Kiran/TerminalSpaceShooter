@@ -9,14 +9,14 @@ class MainMenu:
         self.__animationsRegistry = animationRegistry
         temp = {}
         for i in range(1 , 33):
-            for j in range(1 , 165): 
+            for j in range(1 , 163): 
                 temp[(i , j)] = "\x1b[0m"
       
-        self.visual = h.Sprite(self.__assetmanager.getTexture(textureName="main_menu_nill") , colorRegister=temp , textureRectPosition=(1 , 1) , dimensions=(162 , 31) , zIndex=1)
+        self.visual = h.Sprite(self.__assetmanager.getTexture(textureName="main_menu_nill") , colorRegister=temp , textureRectPosition=(1 , 1) , dimensions=(162 , 32) , zIndex=1)
         self.visual.setPosition((1 , 1))
 
 
-        self.__arrow = h.Sprite(self.__assetmanager.getTexture(textureName="arrow") , colorRegister={} , textureRectPosition=(1 , 1) , dimensions=(7 , 1) , zIndex=2)
+        self.__arrow = h.Sprite(self.__assetmanager.getTexture(textureName="arrow") , colorRegister={} , textureRectPosition=(1 , 1) , dimensions=(7 , 2) , zIndex=2)
         self.__arrow.setPosition((12  , 59))
         temp={}
         for i in range(1 , 3):
