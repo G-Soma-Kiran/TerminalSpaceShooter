@@ -26,7 +26,7 @@ class WindowHandler:
 
             key = (terminalRelatedX , terminalRelatedY)
             existing = self.__currentRenderMap.get(key)
-            if(existing == None or existing[2] <= val[2]):
+            if(existing is None or existing[2] <= val[2]):
                 self.__currentRenderMap[key] = val  
     
     
