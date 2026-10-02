@@ -1,6 +1,6 @@
 #width  is number of charecters horizontally
 #height is number of charecters vertically
-
+from enum import Enum
 class Sprite:
 
     class __TextureData:
@@ -19,6 +19,7 @@ class Sprite:
         self.__position = None
 
         self.__visible = True
+        self.__transparent = False
 
         self.__currentAnimation = None
         self.__currentAnimationSpeed = 24
@@ -51,11 +52,10 @@ class Sprite:
         return self.__texture.dimensions
 
     def setColorRegister(self , * , colorRegister : dict  , defaultColor : str ="\x1b[0m"):
-        if(color != None):
-            for i in range(1 , self.__texture.dimensions[1]+1):
-                for j in range(1 , self.__texture.dimensions[0]+1):
-                    if(colorRegister.get((i , j)) == None):
-                        colorRegister[(i , j)] = defaultColor
+        for i in range(1 , self.__texture.dimensions[1]+1):
+            for j in range(1 , self.__texture.dimensions[0]+1):
+                if(colorRegister.get((i , j)) == None):
+                    colorRegister[(i , j)] = defaultColor
 
         self.__texture.colorRegister = colorRegister
 
@@ -93,6 +93,9 @@ class Sprite:
     def getVisibility(self):
         return self.__visible
 
+    def setTransparency(self , boolean):
+        self.__transparent = boolean
+
 
     def getOccupiedCoords(self):
         occupiedCoords = {}
@@ -103,7 +106,7 @@ class Sprite:
         texture2dArray = self.__texture.texture.splitlines()
         for i in range(row , row + height ):
             for j in range(col , col + width ):
-                if(self.__visible and texture2dArray[i][j] != " "):
+                if(self.__visible and (not self.__transparent or texture2dArray[i][j] != " ")):
                     occupiedCoords[(self.__position[0]+i - row , self.__position[1]+j - col)] = (texture2dArray[i][j] , self.__texture.colorRegister.get((i - row + 1, j - col + 1) ,"\x1b[0m") , self.__zIndex ) 
 
         return occupiedCoords
@@ -136,5 +139,27 @@ def isColliding(* , rect1Pos , rect1Dimensions , rect2Pos , rect2Dimensions ):
 
 def color(R ,G , B):
     return f"\x1b[38;2;{R};{G};{B}m"
-    
 
+
+def rectangle(* , dimensions):
+    boxWidth = dimensions[0]
+    boxHeight = dimensions[1]
+    texture = "┌"
+    texture += (boxWidth - 2) * "─"
+    texture += "┐\n"
+    for i in range(boxHeight - 2):
+        texture+="│"
+        texture+=(boxWidth - 2) *" "
+        texture+="│\n"
+    texture += "└"
+    texture += (boxWidth - 2) * "─"
+    texture += "┘\n"
+    return texture
+
+
+class Request(Enum):
+    push=1,
+    pop=2,
+    popAndSave = 3,
+    replaceWith=4,
+    switchTo=5,

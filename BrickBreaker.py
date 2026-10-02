@@ -8,7 +8,11 @@ PADDLE_TEXTURE_RECT_POS = (3 , 1)
 
 class BrickBreaker:
 
-
+    def renderBelow(self):
+        return self.__renderBelow
+        
+    def updateBelow(self):
+        return self.__updateBelow
     class Brick:
         def __init__(self , * , texture , width , height , color , position , hitpoints):
             temp={}
@@ -74,7 +78,11 @@ class BrickBreaker:
                 self.visual.setPosition((currPos[0] , min(currPos[1] + 4 , 162 - 14)))
 
 
-    def __init__(self , * , windowHandler , assetManager):
+    def __init__(self , * , windowHandler ,assetManager , animationRegistry):
+        self.__reqs = []
+        self.__renderBelow = False
+        self.__updateBelow = False
+
         self.__windowHandler = windowHandler
         self.__assetManager = assetManager
         self.__ball = self.Ball(texture=self.__assetManager.getTexture(textureName="BB"))
@@ -132,6 +140,9 @@ class BrickBreaker:
             currRow+=downSpace
 
     def handleInput(self , * , input , time):
+        if(input == b"p"):
+            self.__reqs.append((h.Request.popAndSave , None))
+            self.__reqs.append((h.Request.push , "MainMenu"))
         self.__paddle.handleInput(input=input , time=time)
     
     def update(self , * , time):
@@ -182,6 +193,9 @@ class BrickBreaker:
         self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__ball.update(time=time))
         self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__paddle.update(time=time))
 
+        copy = self.__reqs[:]
+        self.__reqs.clear()
+        return copy
     def render(self):
         self.__windowHandler.render()
 

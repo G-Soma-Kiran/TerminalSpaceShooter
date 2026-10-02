@@ -9,7 +9,8 @@ import window_handler as window
 import collisionTest as collision
 import BrickBreaker as brick
 import TicTacToe as tik
-
+import pauseScene as p
+import Tetris as tetris
 
 class Game:
 
@@ -72,10 +73,90 @@ class Game:
                 raise ValueError(f"{animationName} is not in animationRegistry.addFrame")
             return tuple(self.__allAnimations[animationName])
 
+    class SceneManager:
         
+        def __init__(self , * , defaultScene  , windowHandler , assetManager , animationRegistry):
+            self.__windowHandler = windowHandler 
+            self.__assetManager = assetManager
+            self.__animationRegistry = animationRegistry
+            self.__sceneStack = []
+            self.__requests = [(h.Request.push , defaultScene)]
+            self.__sceneRegistry = {}
+            self.__persistentScenes = {}
+
+        def registerScene(self , *args):
+            for scene in args:
+                if(scene.__name__ in self.__sceneRegistry.keys()):
+                    raise ValueError(f"{scene} already exists in sceneRegistry")
+                self.__sceneRegistry[scene.__name__] = scene
+            
+
+        def __createScene(self , * , sceneName):
+            return self.__sceneRegistry[sceneName](windowHandler=self.__windowHandler , assetManager=self.__assetManager , animationRegistry=self.__animationRegistry)
+        
+        def __push(self , * , sceneName):
+            if(self.__persistentScenes.get(sceneName) != None ):
+                self.__sceneStack.append(self.__persistentScenes.pop(sceneName))
+            else:
+                self.__sceneStack.append(self.__createScene(sceneName=sceneName))
+
+        def __pop(self):
+            self.__sceneStack.pop()
+
+        def __saveAndPop(self):
+            self.__persistentScenes[type(self.__sceneStack[-1]).__name__] = self.__sceneStack[-1]
+            self.__sceneStack.pop()
+
+        def __replaceWith(self , * , sceneName):
+            self.__pop()
+            self.__push(sceneName=sceneName)
+
+        def __switchTo(self , *,sceneName):
+            self.__saveAndPop()
+            self.__push(sceneName=sceneName)
+
+        def completeRequests(self):
+            for request , scene in self.__requests:
+                if(request == h.Request.push):
+                    self.__push(sceneName=scene)
+                elif(request == h.Request.pop):
+                    self.__pop()
+                elif(request == h.Request.popAndSave ):
+                    self.__saveAndPop()
+                elif(request == h.Request.replaceWith):
+                    self.__replaceWith(sceneName=scene)
+                elif(request == h.Request.switchTo):
+                    self.__switchTo(sceneName=scene)
+                else:
+                    raise ValueError(f"Unknown scene request: {request}")
+
+            self.__requests.clear()
+
+        def updateScene(self , * , keys , time):
+            for key , t in keys:
+                self.__sceneStack[-1].handleInput(input=key , time=t)
 
 
+            i=len(self.__sceneStack)-1
+            while(i > 0 and self.__sceneStack[i].updateBelow()):
+                i=i-1
+            while(i < len(self.__sceneStack)-1):
+                self.__sceneStack[i].update(time=time)
+                i+=1
+            reqs = self.__sceneStack[-1].update(time = time)
+            self.__requests.extend(reqs)
 
+            i=len(self.__sceneStack)-1
+            while(i > 0 and self.__sceneStack[i].renderBelow()):
+                i-=1
+            while(i < len(self.__sceneStack)-1):
+                self.__sceneStack[i].render()
+                i+=1
+
+            self.__sceneStack[-1].render()
+
+        def isSceneStackEmpty(self):
+            return len(self.__sceneStack) == 0
 
     def __init__(self):
         self.__frameNumber = 0
@@ -83,22 +164,10 @@ class Game:
         self.assetManager = self.AssetManager()
         self.windowHandler = window.WindowHandler()
         self.animationRegistry = self.Animations()
-        # self.sceneManager = self.SceneManager(defaultScene=None , windowHandler=self.windowHandler , assetManager=self.assetManager , animationRegistry=self.animationRegistry)
+        self.sceneManager = self.SceneManager(defaultScene="Tetris" , windowHandler=self.windowHandler , assetManager=self.assetManager , animationRegistry=self.animationRegistry)
 
-        self.assetManager.importTextures(arrow="./Arrow.txt" , main_menu_nill="./MainMenuNill.txt" , BB="./brickBreaker.txt" , tic="./tictactoe.txt")
-        # h.Sprite.createAnimation(animationName="LeftRight")
-        # h.Sprite.addFrame(animationName="LeftRight" , textureName="arrow" , colorRegister={} , textureRect=(1 ,1) , dimensions=(7 , 1))
-        # h.Sprite.addFrame(animationName="LeftRight" , textureName="arrow" , colorRegister={} , textureRect=(3 ,1) , dimensions=(7 , 1))
-        self.__gameStates = [self.GameState.TicTacToe ,self.GameState.BrickBreaker , self.GameState.MainMenu , self.GameState.Collision]
-        self.__gameStateIdx = 0
-        self.__gameStateToScenes = {}
-        self.__gameStateToScenes[self.GameState.MainMenu] = m.MainMenu(windowHandler=self.windowHandler , assetManager=self.assetManager , animationRegistry=self.animationRegistry)
-        self.__gameStateToScenes[self.GameState.Collision] = collision.collisionTest(windowHandler=self.windowHandler)
-        self.__gameStateToScenes[self.GameState.BrickBreaker] = brick.BrickBreaker(windowHandler=self.windowHandler , assetManager=self.assetManager)
-        self.__gameStateToScenes[self.GameState.TicTacToe] = tik.TikTakToe(windowHandler=self.windowHandler , assetManager=self.assetManager , animationRegistry=self.animationRegistry)
-
-    def getCurrentScene(self):
-        return self.__gameStateToScenes[self.__gameStates[self.__gameStateIdx]]
+        self.assetManager.importTextures(arrow="./Arrow.txt" , main_menu_nill="./MainMenuNill.txt" , BB="./brickBreaker.txt" , tic="./tictactoe.txt" , pause="./pause.txt" )
+        self.sceneManager.registerScene(tik.TikTakToe , m.MainMenu , collision.collisionTest , brick.BrickBreaker , p.PauseScene , tetris.Tetris)
 
     def run(self):
         print("\033[?1049h", end="")
@@ -111,25 +180,18 @@ class Game:
             dt = currentTime - previousTime
             previousTime = currentTime
             self.windowHandler.handleTerminalSizeChange(terminalSize=tuple(shell.get_terminal_size()) , time=(T.perf_counter() - loopStart) )
+            self.sceneManager.completeRequests()
+            if(self.sceneManager.isSceneStackEmpty()):
+                print("\033[?1049l", end="")
+                print("\x1b[?25h", end="")
+                return
+            keys=[]
             while( Input.kbhit()):
-                key = Input.getch()
-                if( key == b'\x1b'):
-                    # print("\033[H\033[J", end="")
-                    print("\033[?1049l", end="")
-                    print("\x1b[?25h", end="")
-                    return
-                elif( key == b'p'):
-                    # if(self.__gameState == self.GameState.MainMenu):
-                    #     self.__gameState = self.GameState.Collision
-                    # else:
-                    #     self.__gameState = self.GameState.MainMenu
-                    self.__gameStateIdx = (self.__gameStateIdx + 1)%len(self.__gameStates)
-                elif ( key == b'r'):
-                    if(self.__gameStates[self.__gameStateIdx] == self.GameState.BrickBreaker):
-                        self.__gameStateToScenes[self.GameState.BrickBreaker] = brick.BrickBreaker(windowHandler=self.windowHandler , assetManager=self.assetManager)
-                self.getCurrentScene().handleInput(input=key , time=(T.perf_counter() - loopStart))
-            self.getCurrentScene().update(time=(T.perf_counter()- loopStart))
-            self.getCurrentScene().render()
+                keys.append((Input.getch() , T.perf_counter() - loopStart))
+
+            self.sceneManager.updateScene(keys=keys , time=(T.perf_counter()- loopStart))
+
+
             print(f"\x1b[31;3H", end="")
             if(self.__frameNumber%60 == 0):
                 print(f"{1/dt : .2f}" , end="")
@@ -140,6 +202,7 @@ class Game:
             if((frameEnd - frameStart) > 0 and (frameEnd - frameStart) < 0.033 ):
                 T.sleep(0.033 - (frameEnd - frameStart))
             self.__frameNumber+=1
+        
 
 
 

@@ -1,6 +1,5 @@
 import helpers as h
 from enum import Enum
-import time as T
 
 class TikTakToe:
 
@@ -10,6 +9,12 @@ class TikTakToe:
     class Turn(Enum):
         X = 1,
         O = 2
+
+    def renderBelow(self):
+        return self.__renderBelow
+            
+    def updateBelow(self):
+        return self.__updateBelow
 
     def makeBox(self , * ,boxDimensions):
         boxWidth = boxDimensions[0]
@@ -82,13 +87,21 @@ class TikTakToe:
 
     def makeEndGameScreen(self , * , screenDimensions):
         texture = self.makeBox(boxDimensions=screenDimensions)
+        texture2 = h.rectangle(dimensions=(screenDimensions[0]+2 , screenDimensions[1]+2))
+
+        pos=(10 , 62)
+
+        self.__endScreenEntities.append(h.Sprite(texture=texture2 , colorRegister={} , textureRectPosition=(1,1) , dimensions=(screenDimensions[0]+2 , screenDimensions[1]+2) , zIndex=2))
+        self.__endScreenEntities[-1].setPosition((pos[0]-1 , pos[1]-1))
 
         self.__endScreenEntities.append(h.Sprite(texture=texture , colorRegister={} , textureRectPosition=(1,1) , dimensions=screenDimensions , zIndex=2))
-        self.__endScreenEntities[-1].setPosition((14 , 63))
-        self.__endScreenEntities.append(h.Sprite(texture=self.__assetManager.getTexture(textureName="tic") , colorRegister={} , textureRectPosition=(49,1) , dimensions=(26 , 2) , zIndex=2))
-        self.__endScreenEntities[-1].setPosition((15 , 64))
-        self.__endScreenEntities.append(h.Sprite(texture=self.__assetManager.getTexture(textureName="tic") , colorRegister={} , textureRectPosition=(53,1) , dimensions=(13 , 2) , zIndex=2))
-        self.__endScreenEntities[-1].setPosition((18 , 64))
+        self.__endScreenEntities[-1].setPosition(pos)
+
+
+        self.__endScreenEntities.append(h.Sprite(texture=self.__assetManager.getTexture(textureName="pause") , colorRegister={} , textureRectPosition=(1,1) , dimensions=(26 , 2) , zIndex=2))
+        self.__endScreenEntities[-1].setPosition((14, pos[1]+1+(screenDimensions[0]-28)//2))
+        self.__endScreenEntities.append(h.Sprite(texture=self.__assetManager.getTexture(textureName="pause") , colorRegister={} , textureRectPosition=(5,1) , dimensions=(13 , 2) , zIndex=2))
+        self.__endScreenEntities[-1].setPosition((20 , pos[1]+1+(screenDimensions[0]-15)//2))
 
         for item in self.__endScreenEntities:
             item.setVisibility(boolean=False)
@@ -113,9 +126,14 @@ class TikTakToe:
         self.__assetManager = assetManager
         self.__animationRegistry = animationRegistry
 
+        self.__reqs = []
+        self.__renderBelow = False
+        self.__updateBelow = False
+
         self.border = h.Sprite(texture=self.__assetManager.getTexture(textureName="tic") , colorRegister={} , textureRectPosition=(1 ,1) ,dimensions=(162 , 32) , zIndex=1)
         self.border.setPosition(coords=(1,1))
         self.border.setColorRegister(colorRegister={} ,defaultColor=h.color(100, 210, 230))
+        self.border.setTransparency(True)
 
         self.makeBoard(cellDimensions=(12 , 6) , boardStartPosition=(10 , 62))
         self.__gameState = self.State.gameplay
@@ -143,9 +161,14 @@ class TikTakToe:
 
 
         self.__endScreenEntities = []
-        self.makeEndGameScreen(screenDimensions=(28,7))
+        self.makeEndGameScreen(screenDimensions=(36,18))
 
     def handleInput(self , * , input , time):
+
+        if(input == b"p"):
+            self.__reqs.append((h.Request.popAndSave , None))
+            self.__reqs.append((h.Request.push , "BrickBreaker"))
+
         if(self.__gameState == self.State.gameplay):
             if(input == b"w"):
                 currCell = self.__selectedCell
@@ -208,6 +231,10 @@ class TikTakToe:
 
         for item in self.__endScreenEntities:
             self.__windowHandler.handleOccupiedCoords(occupiedCoords=item.getOccupiedCoords())
+
+        copy = self.__reqs[:]
+        self.__reqs.clear()
+        return copy
 
     def render(self):
         self.__windowHandler.render()

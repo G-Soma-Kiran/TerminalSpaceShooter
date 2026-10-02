@@ -2,6 +2,12 @@ import helpers as h
 
 class MainMenu: 
 
+    def renderBelow(self):
+        return self.__renderBelow
+
+    def updateBelow(self):
+        return self.__updateBelow
+
     def __init__(self ,* , windowHandler , assetManager , animationRegistry):
         self.flag = True
         self.__windowHandler = windowHandler
@@ -24,8 +30,16 @@ class MainMenu:
                 temp[(i , j)] =  "\x1b[38;2;255;255;0m"
         self.__arrow.setColorRegister(colorRegister=temp)
         self.__lastVisibleTimeOfArrow = 0
+        self.__reqs=[]
+        self.__renderBelow = False
+        self.__updateBelow = False
 
     def handleInput(self , * , input , time):
+
+        if(input == b"p"):
+            self.__reqs.append((h.Request.popAndSave , None))
+            self.__reqs.append((h.Request.push , "collisionTest"))
+        
         if(input == b"w"):
             self.__arrow.setPosition((12 , 59))
             self.__lastVisibleTimeOfArrow = time
@@ -38,6 +52,8 @@ class MainMenu:
         elif(input == b"d"):
             self.__arrow.setTextureRect(textureRectPosition=(1 , 1))
             self.__lastVisibleTimeOfArrow = time
+        elif(input == b'\x1b'):
+            self.__reqs.append((h.Request.pop,None))
         
     def update(self , * , time):
         # self.__arrow.update(time=time)
@@ -60,6 +76,10 @@ class MainMenu:
 
         self.__windowHandler.handleOccupiedCoords(occupiedCoords= self.visual.getOccupiedCoords())
         self.__windowHandler.handleOccupiedCoords(occupiedCoords= self.__arrow.getOccupiedCoords())
+
+        copy = self.__reqs[:]
+        self.__reqs.clear()
+        return copy
     def render(self):
         self.__windowHandler.render()
 

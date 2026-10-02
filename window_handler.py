@@ -7,6 +7,8 @@ class WindowHandler:
         self.__cooldownTimeForRedraw = None
         self.__hold = False
 
+    def getWindowSize(self):
+        return self.__desiredTerminalSize
 
     def handleOccupiedCoords(self , * , occupiedCoords):
         desiredWidth , desiredHeight = self.__desiredTerminalSize

@@ -2,6 +2,12 @@ import helpers as h
 
 class collisionTest:
 
+    def renderBelow(self):
+        return self.__renderBelow
+    
+    def updateBelow(self):
+        return self.__updateBelow
+    
     class __rectangle:
         def __init__(self  ,width , height):
             self.width = width
@@ -53,7 +59,11 @@ class collisionTest:
             return self.visual.getOccupiedCoords()
 
 
-    def __init__(self , * , windowHandler):
+    def __init__(self , * , windowHandler ,assetManager , animationRegistry):
+        self.__reqs=[]
+        self.__renderBelow = False
+        self.__updateBelow = False
+
         self.__windowHandler = windowHandler
         self.__box1 = self.__rectangle(4, 2)
         self.__box2 = self.__rectangle(32 , 16)
@@ -61,7 +71,9 @@ class collisionTest:
         self.__selectedBox = 1
 
     def handleInput(self , * , input , time):
-
+        if(input == b"p"):
+            self.__reqs.append((h.Request.popAndSave , None))
+            self.__reqs.append((h.Request.push , "Tetris"))
         if(input == b"c"):
             if(self.__selectedBox == 1):
                 self.__selectedBox = 2
@@ -101,6 +113,9 @@ class collisionTest:
         # handleOccupiedCoords(self , * , occupiedCoords)
         self.__windowHandler.handleOccupiedCoords(occupiedCoords=coordMap1)
         self.__windowHandler.handleOccupiedCoords(occupiedCoords=coordMap2)
+        copy = self.__reqs[:]
+        self.__reqs.clear()
+        return copy
 
     def render(self):
         self.__windowHandler.render()
