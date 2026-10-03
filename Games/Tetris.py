@@ -1,4 +1,4 @@
-import helpers as h
+import Engine.helpers as h
 from enum import Enum
 import random as rnd
 
@@ -269,6 +269,11 @@ class Tetris:
         self.__renderSprite.setPosition(_GRID_POS)
         self.updateGrid()
 
+        nextRect = h.Sprite(texture=h.rectangle(dimensions=(12,6)) , colorRegister={} , textureRectPosition=(1,1) , dimensions=(12,6) , zIndex=1)
+        nextRect.setPosition((_GRID_POS[0]+6 ,  _GRID_POS[1] + _GRID_SIZE[0] + 3))
+        nextRect.setTransparency(True)
+        self.__nextRectCoords = nextRect.getOccupiedCoords()
+
     def updateGrid(self, flashRows=()):
         lines = []
         colors = {}
@@ -423,6 +428,8 @@ class Tetris:
         rgb = _COLORS[self.__nextType]
         for dr, dc in _SHAPES[self.__nextType]:
             r, c = top + 8 + dr, left + 4 + dc
+            if(self.__nextType == BlockType.O):
+                c+=1
             coords[(r, c)] = ("█", shade(rgb, 1.0), 1)
             coords[(r, c + 1)] = ("█", shade(rgb, 0.7), 1)
 
@@ -448,4 +455,5 @@ class Tetris:
                 self.__windowHandler.handleOccupiedCoords(occupiedCoords=coord)
 
         self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__hudCoords())
+        self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__nextRectCoords)
         self.__windowHandler.render()

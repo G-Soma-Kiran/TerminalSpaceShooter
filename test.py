@@ -1,16 +1,16 @@
 import time as T
 import msvcrt as Input
-import _main_menu as m
-import helpers as h
+import Games._main_menu as m
+import Engine.helpers as h
 import sys
 from enum import Enum
 import shutil as shell
-import window_handler as window
-import collisionTest as collision
-import BrickBreaker as brick
-import TicTacToe as tik
-import pauseScene as p
-import Tetris as tetris
+import Engine.window_handler as window
+import Games.collisionTest as collision
+import Games.BrickBreaker as brick
+import Games.TicTacToe as tik
+import Games.pauseScene as p
+import Games.Tetris as tetris
 
 class Game:
 
@@ -166,7 +166,7 @@ class Game:
         self.animationRegistry = self.Animations()
         self.sceneManager = self.SceneManager(defaultScene="Tetris" , windowHandler=self.windowHandler , assetManager=self.assetManager , animationRegistry=self.animationRegistry)
 
-        self.assetManager.importTextures(arrow="./Arrow.txt" , main_menu_nill="./MainMenuNill.txt" , BB="./brickBreaker.txt" , tic="./tictactoe.txt" , pause="./pause.txt" )
+        self.assetManager.importTextures(arrow="./Assets/Textures/Arrow.txt" , main_menu_nill="./Assets/Textures/MainMenuNill.txt" , BB="./Assets/Textures/brickBreaker.txt" , tic="./Assets/Textures/tictactoe.txt" , pause="./Assets/Textures/pause.txt" )
         self.sceneManager.registerScene(tik.TikTakToe , m.MainMenu , collision.collisionTest , brick.BrickBreaker , p.PauseScene , tetris.Tetris)
 
     def run(self):
