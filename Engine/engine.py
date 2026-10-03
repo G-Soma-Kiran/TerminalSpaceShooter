@@ -1,26 +1,11 @@
 import time as T
 import msvcrt as Input
-import Games._main_menu as m
 import Engine.helpers as h
 import sys
-from enum import Enum
 import shutil as shell
 import Engine.window_handler as window
-import Games.collisionTest as collision
-import Games.BrickBreaker as brick
-import Games.TicTacToe as tik
-import Games.pauseScene as p
-import Games.Tetris as tetris
 
 class Game:
-
-    class GameState(Enum):
-        MainMenu = 1,
-        Gameplay = 2,
-        Pause = 3, 
-        Collision = 4,
-        BrickBreaker=5,
-        TicTacToe = 6,
 
     class AssetManager:
 
@@ -158,16 +143,13 @@ class Game:
         def isSceneStackEmpty(self):
             return len(self.__sceneStack) == 0
 
-    def __init__(self):
+    def __init__(self , * , defaultScene):
         self.__frameNumber = 0
 
         self.assetManager = self.AssetManager()
         self.windowHandler = window.WindowHandler()
         self.animationRegistry = self.Animations()
         self.sceneManager = self.SceneManager(defaultScene="Tetris" , windowHandler=self.windowHandler , assetManager=self.assetManager , animationRegistry=self.animationRegistry)
-
-        self.assetManager.importTextures(arrow="./Assets/Textures/Arrow.txt" , main_menu_nill="./Assets/Textures/MainMenuNill.txt" , BB="./Assets/Textures/brickBreaker.txt" , tic="./Assets/Textures/tictactoe.txt" , pause="./Assets/Textures/pause.txt" )
-        self.sceneManager.registerScene(tik.TikTakToe , m.MainMenu , collision.collisionTest , brick.BrickBreaker , p.PauseScene , tetris.Tetris)
 
     def run(self):
         print("\033[?1049h", end="")
@@ -202,12 +184,5 @@ class Game:
             if((frameEnd - frameStart) > 0 and (frameEnd - frameStart) < 0.033 ):
                 T.sleep(0.033 - (frameEnd - frameStart))
             self.__frameNumber+=1
-        
-
-
-
-sample = Game()
-sample.run()
-
 
 
