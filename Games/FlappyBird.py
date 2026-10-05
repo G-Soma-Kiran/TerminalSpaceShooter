@@ -161,6 +161,10 @@ class FlappyBird:
         pillar2CollisionRectPos , pillar2CollisionRectDimensions = self.__pillars[self.__currPillarPair][1].getWorldCollisionRect()
 
         if(
+            self.__bird.getPosition()[0] >= _GAME_SCREEN_POS[0] + _GAME_SCREEN_SIZE[1] - self.__bird.getDimensions()[1]
+            or
+            self.__bird.getPosition()[0] < _GAME_SCREEN_POS[0]
+            or
             h.isColliding(rect1Pos=birdCollisionRectPos , rect1Dimensions=birdCollisionRectDimensions , rect2Pos=pillar1CollisionRectPos , rect2Dimensions=pillar1CollisionRectDimensions)
             or
             h.isColliding(rect1Pos=birdCollisionRectPos , rect1Dimensions=birdCollisionRectDimensions , rect2Pos=pillar2CollisionRectPos , rect2Dimensions=pillar2CollisionRectDimensions)
