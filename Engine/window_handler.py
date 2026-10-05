@@ -31,7 +31,7 @@ class WindowHandler:
     
     
     
-    def handleTerminalSizeChange(self , * ,  terminalSize , time):
+    def __handleTerminalSizeChange(self , * ,  terminalSize , time):
         if(terminalSize != self.__currentTerminalSize):
             self.__currentTerminalSize = terminalSize
             self.__hold = True

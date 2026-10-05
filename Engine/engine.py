@@ -147,9 +147,9 @@ class Game:
         self.__frameNumber = 0
 
         self.assetManager = self.AssetManager()
-        self.windowHandler = window.WindowHandler()
+        self.__windowHandler = window.WindowHandler()
         self.animationRegistry = self.Animations()
-        self.sceneManager = self.SceneManager(defaultScene="Tetris" , windowHandler=self.windowHandler , assetManager=self.assetManager , animationRegistry=self.animationRegistry)
+        self.sceneManager = self.SceneManager(defaultScene=defaultScene , windowHandler=self.__windowHandler , assetManager=self.assetManager , animationRegistry=self.animationRegistry)
 
     def run(self):
         print("\033[?1049h", end="")
@@ -161,7 +161,7 @@ class Game:
             currentTime = frameStart
             dt = currentTime - previousTime
             previousTime = currentTime
-            self.windowHandler.handleTerminalSizeChange(terminalSize=tuple(shell.get_terminal_size()) , time=(T.perf_counter() - loopStart) )
+            self.__windowHandler._WindowHandler__handleTerminalSizeChange(terminalSize=tuple(shell.get_terminal_size()) , time=(T.perf_counter() - loopStart) )
             self.sceneManager.completeRequests()
             if(self.sceneManager.isSceneStackEmpty()):
                 print("\033[?1049l", end="")

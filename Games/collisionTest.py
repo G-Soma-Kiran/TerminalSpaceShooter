@@ -73,7 +73,7 @@ class collisionTest:
     def handleInput(self , * , input , time):
         if(input == b"p"):
             self.__reqs.append((h.Request.popAndSave , None))
-            self.__reqs.append((h.Request.push , "Tetris"))
+            self.__reqs.append((h.Request.push , "FlappyBird"))
         if(input == b"c"):
             if(self.__selectedBox == 1):
                 self.__selectedBox = 2

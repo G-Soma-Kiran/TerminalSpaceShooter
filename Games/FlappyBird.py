@@ -1,3 +1,180 @@
 import Engine.helpers as h
+import Engine.engine
 from enum import Enum
 import random as rnd
+from math import ceil
+
+_GAME_SCREEN_SIZE = (130 , 27)
+_GAME_SCREEN_POS = ()
+
+#Game object proportions , everything with respect to bird texture width.
+_BIRD_WIDTH = 6
+
+_PILLAR_WIDTH = int(1.5 * _BIRD_WIDTH)
+_VERTICAL_SPACING = 2 * _BIRD_WIDTH
+_HORIZONTAL_SPACING = 5 * _BIRD_WIDTH
+_TOTAL_PILLAR_PAIRS = ceil(_GAME_SCREEN_SIZE[0]/(_PILLAR_WIDTH+_HORIZONTAL_SPACING))
+
+class FlappyBird: 
+
+    def renderBelow(self):
+        return self.__renderBelow
+
+    def updateBelow(self):
+        return self.__updateBelow
+
+    def __setUpExtras(self):
+        border = h.Sprite(h.rectangle(dimensions=(_GAME_SCREEN_SIZE[0] + 2, _GAME_SCREEN_SIZE[1] + 2)), colorRegister={}, textureRectPosition=(1, 1),
+                                  dimensions=(_GAME_SCREEN_SIZE[0] + 2, _GAME_SCREEN_SIZE[1] + 2), zIndex=2)
+        border.setTransparency(True)
+        border.setPosition((_GAME_SCREEN_POS[0] - 1, _GAME_SCREEN_POS[1] - 1))
+        self.__borderCoords = border.getOccupiedCoords()
+
+
+        texture = []
+        texture.append("┌" + "─"*(_PILLAR_WIDTH-2)+"┐\n")
+        for _ in range(_GAME_SCREEN_SIZE[1] - 3):
+            texture.append("│"+ " "*(_PILLAR_WIDTH-2) +"│\n")
+        texture.append("│"+ "="*(_PILLAR_WIDTH-2) +"│\n")
+        texture.append("="*_PILLAR_WIDTH+"\n")
+
+        self.__upPillarTexture = ''.join(texture)
+        texture.clear()
+
+
+
+        texture.append("="*_PILLAR_WIDTH+"\n")
+        texture.append("│"+ "="*(_PILLAR_WIDTH-2) +"│\n")
+
+        for _ in range(_GAME_SCREEN_SIZE[1] - 3):
+            texture.append("│"+ " "*(_PILLAR_WIDTH-2) +"│\n")
+        texture.append("└" + "─"*(_PILLAR_WIDTH-2)+"┘\n")
+
+        self.__downPillarTexture = ''.join(texture)
+
+    def __getPillarHeight(self):
+        return rnd.randint(_GAME_SCREEN_POS[0]-_GAME_SCREEN_SIZE[1] + 2 , _GAME_SCREEN_POS[0] - _VERTICAL_SPACING - 2)
+
+    def __updatePillars(self):
+        for i in range(_TOTAL_PILLAR_PAIRS):
+            currPos = self.__pillars[i][0].getPosition()
+
+            if(currPos[1] - 1 +_PILLAR_WIDTH <= _GAME_SCREEN_POS[1]-1 ):
+                newY = _GAME_SCREEN_POS[1] + (_TOTAL_PILLAR_PAIRS-1)*(_PILLAR_WIDTH + _HORIZONTAL_SPACING) + _HORIZONTAL_SPACING
+                newX = self.__getPillarHeight()
+                self.__currPillarPair = (self.__currPillarPair+1)%_TOTAL_PILLAR_PAIRS
+
+            else:
+                newY = currPos[1]-1
+                newX = currPos[0]
+
+            self.__pillars[i][0].setPosition((newX , newY))
+            self.__pillars[i][1].setPosition((newX+_VERTICAL_SPACING+_GAME_SCREEN_SIZE[1] , newY))
+
+    def __init__(self , * , windowHandler:Engine.engine.window.WindowHandler, assetManager:Engine.engine.Game.AssetManager , animationRegistry:Engine.engine.Game.Animations):
+        self.__windowHandler = windowHandler
+        self.__assetmanager = assetManager
+        self.__animationsRegistry = animationRegistry
+
+        self.__isPaused = False
+
+        self.__reqs=[]
+        self.__renderBelow = False
+        self.__updateBelow = False
+
+
+        global _GAME_SCREEN_POS
+        _GAME_SCREEN_POS=(
+            (self.__windowHandler.getWindowSize()[1] // 2) - (_GAME_SCREEN_SIZE[1] // 2),
+            (self.__windowHandler.getWindowSize()[0] // 2) - (_GAME_SCREEN_SIZE[0] // 2)
+        )
+
+        self.__setUpExtras()
+        
+
+        self.__bird = h.Sprite(self.__assetmanager.getTexture(textureName="FlappyBird") , colorRegister={} , textureRectPosition=(1,1) , dimensions=(6,3) , zIndex=1)
+        self.__bird.setPosition(coords=(20 , 20))
+        self.__bird.setCollisionRect(collisionRect=(2,1))
+        self.__bird.setCollisionRectDimensions(dimensions=(6,2))
+
+        self.__previousBirdDropTime = 0
+        self.__previousPillarUpdateTime = 0
+
+        self.__pillars = []
+        self.__currPillarPair = 0
+        for i in range(_TOTAL_PILLAR_PAIRS):
+            self.__pillars.append(
+                (
+                    h.Sprite(texture=self.__upPillarTexture , colorRegister={} , textureRectPosition=(1,1) , dimensions=( _PILLAR_WIDTH , _GAME_SCREEN_SIZE[1]) , zIndex=1),
+                    h.Sprite(texture=self.__downPillarTexture , colorRegister={} , textureRectPosition=(1,1) , dimensions=( _PILLAR_WIDTH , _GAME_SCREEN_SIZE[1]) , zIndex=1)
+                ),
+            )
+            x = self.__getPillarHeight()
+            y = _GAME_SCREEN_POS[1]+_GAME_SCREEN_SIZE[0]+ i*(_PILLAR_WIDTH + _HORIZONTAL_SPACING)
+            self.__pillars[-1][0].setPosition((x , y))
+            self.__pillars[-1][1].setPosition((x+_VERTICAL_SPACING+_GAME_SCREEN_SIZE[1] , y))
+
+            self.__pillars[-1][0].setCollisionRect(collisionRect=(1,1))
+            self.__pillars[-1][0].setCollisionRectDimensions(dimensions=(_PILLAR_WIDTH , _GAME_SCREEN_SIZE[1]))
+            self.__pillars[-1][1].setCollisionRect(collisionRect=(1,1))
+            self.__pillars[-1][1].setCollisionRectDimensions(dimensions=(_PILLAR_WIDTH , _GAME_SCREEN_SIZE[1]))
+        
+
+    def handleInput(self , * , input , time):
+
+        if(input == b"p"):
+            self.__reqs.append((h.Request.popAndSave , None))
+            self.__reqs.append((h.Request.push , "Tetris"))
+        
+        elif(input == b'\x1b'):
+            self.__reqs.append((h.Request.pop,None))
+
+        elif(input == b"m"):
+            self.__isPaused = not self.__isPaused
+
+        elif(input == b" "):
+            currPos = self.__bird.getPosition()
+            self.__bird.setPosition((currPos[0]-2 , currPos[1]))
+            self.__bird.setTextureRect(textureRectPosition=(5 ,1))
+            self.__bird.setTextureRectDimensions(dimensions=(6,4))
+            self.__previousBirdDropTime+=0.05
+
+    def update(self , * , time):
+        if(self.__isPaused):
+            copy = self.__reqs[:]
+            self.__reqs.clear()
+            return copy
+
+        if(time - self.__previousPillarUpdateTime >= 0.015):
+            self.__previousPillarUpdateTime = time
+            self.__updatePillars()
+
+        if(time - self.__previousBirdDropTime >= 0.1):
+            self.__previousBirdDropTime = time
+            currPos = self.__bird.getPosition()
+            self.__bird.setPosition((currPos[0]+1, currPos[1]))
+            self.__bird.setTextureRect(textureRectPosition=(1 ,1))
+            self.__bird.setTextureRectDimensions(dimensions=(6,3))
+
+        birdCollisionRectPos , birdCollisionRectDimensions = self.__bird.getWorldCollisionRect()
+        pillar1CollisionRectPos , pillar1CollisionRectDimensions = self.__pillars[self.__currPillarPair][0].getWorldCollisionRect()
+        pillar2CollisionRectPos , pillar2CollisionRectDimensions = self.__pillars[self.__currPillarPair][1].getWorldCollisionRect()
+
+        if(
+            h.isColliding(rect1Pos=birdCollisionRectPos , rect1Dimensions=birdCollisionRectDimensions , rect2Pos=pillar1CollisionRectPos , rect2Dimensions=pillar1CollisionRectDimensions)
+            or
+            h.isColliding(rect1Pos=birdCollisionRectPos , rect1Dimensions=birdCollisionRectDimensions , rect2Pos=pillar2CollisionRectPos , rect2Dimensions=pillar2CollisionRectDimensions)
+            ):
+            self.__isPaused = True
+
+        copy = self.__reqs[:]
+        self.__reqs.clear()
+        return copy
+    
+    def render(self):
+        self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__borderCoords)
+        for i in range(_TOTAL_PILLAR_PAIRS):
+            self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__pillars[i][0].getOccupiedCoords())
+            self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__pillars[i][1].getOccupiedCoords())
+        self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__bird.getOccupiedCoords())
+        self.__windowHandler.render()
