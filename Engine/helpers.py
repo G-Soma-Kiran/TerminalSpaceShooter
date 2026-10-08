@@ -1,6 +1,6 @@
 #width  is number of charecters horizontally
 #height is number of charecters vertically
-from enum import Enum
+
 class Sprite:
 
     class __TextureData:
@@ -157,9 +157,44 @@ def rectangle(* , dimensions):
     return texture
 
 
-class Request(Enum):
-    push=1,
-    pop=2,
-    popAndSave = 3,
-    replaceWith=4,
-    switchTo=5,
+
+class View:
+
+    def __init__(self , * , viewPosition , viewDimensions , viewPortPos , viewPortDimensions):
+        self.__viewPosition = viewPosition
+        self.__viewDimensions = viewDimensions
+        self.__viewPortPos = viewPortPos
+        self.__viewPortDimensions = viewPortDimensions
+
+    def getViewPosition(self):
+        return self.__viewPosition
+    
+    def getViewDimensions(self):
+        return self.__viewDimensions
+    
+    def getViewPortPosition(self):
+        return self.__viewPortPos
+    
+    def getViewPortDimensions(self):
+        return self.__viewPortDimensions
+
+    def setViewPosition(self , * , viewPosition):
+        self.__viewPosition = viewPosition
+
+    def setViewPortPosition(self ,* , viewPortPosition) :
+        self.__viewPortPos = viewPortPosition
+
+    def setViewDimensions(self , * , viewDimensions):
+        self.__viewDimensions = viewDimensions
+
+    def setViewPortDimensions(self , * , viewPortDimensions):
+        self.__viewPortDimensions = viewPortDimensions
+
+    def moveView(self , * , dx , dy):
+        currViewPos = self.__viewPosition
+        self.setViewPosition(viewPosition=(currViewPos[0] + dx , currViewPos[1] + dy))
+
+    def moveViewPort(self , * , dx , dy):
+        currViewPortPos = self.__viewPortPos
+        self.setViewPortPosition(viewPortPosition=(currViewPortPos[0] + dx , currViewPortPos[1] + dy))
+

@@ -1,7 +1,8 @@
 import Engine.helpers as h
+import Engine.scene as scene
 from enum import Enum
 
-class TikTakToe:
+class TikTakToe(scene.Scene):
 
     class State(Enum):
         gameplay = 1,
@@ -9,12 +10,6 @@ class TikTakToe:
     class Turn(Enum):
         X = 1,
         O = 2
-
-    def renderBelow(self):
-        return self.__renderBelow
-            
-    def updateBelow(self):
-        return self.__updateBelow
 
     def makeBox(self , * ,boxDimensions):
         boxWidth = boxDimensions[0]
@@ -121,14 +116,11 @@ class TikTakToe:
         for item in self.__endScreenEntities:
             item.setVisibility(boolean=False)
 
-    def __init__(self , * , windowHandler , assetManager , animationRegistry):
-        self.__windowHandler = windowHandler
-        self.__assetManager = assetManager
-        self.__animationRegistry = animationRegistry
+    def _onCreate(self):
+        self.__windowHandler = self._systems.getWindow()
+        self.__assetManager = self._systems.getAssetManager()
+        self.__animationRegistry = self._systems.getAnimationRegistry()
 
-        self.__reqs = []
-        self.__renderBelow = False
-        self.__updateBelow = False
 
         self.border = h.Sprite(texture=self.__assetManager.getTexture(textureName="tic") , colorRegister={} , textureRectPosition=(1 ,1) ,dimensions=(162 , 32) , zIndex=1)
         self.border.setPosition(coords=(1,1))
@@ -136,6 +128,8 @@ class TikTakToe:
         self.border.setTransparency(True)
 
         self.makeBoard(cellDimensions=(12 , 6) , boardStartPosition=(10 , 62))
+        currWindowSize = self.__windowHandler.getWindowSize()
+        self.setView(view=h.View(viewPosition=(1,1) , viewDimensions=(162 , 32)  , viewPortPos=(1,1) , viewPortDimensions=(162 , 32)))
         self.__gameState = self.State.gameplay
 
         self.__currentTurn = self.Turn.X
@@ -166,8 +160,13 @@ class TikTakToe:
     def handleInput(self , * , input , time):
 
         if(input == b"p"):
-            self.__reqs.append((h.Request.popAndSave , None))
-            self.__reqs.append((h.Request.push , "BrickBreaker"))
+            self.popAndSave()
+            self.pushScene(sceneName="BrickBreaker")
+        elif(input == b"resize"):
+            currWindowSize = self.__windowHandler.getWindowSize()
+            self.getView().setViewPortPosition(viewPortPosition=((currWindowSize[1]//2) - ( 32// 2) + 1,(currWindowSize[0]//2) - (162 // 2) + 1))
+        elif(input == b'\x1b'):
+            self.popScene()
 
         if(self.__gameState == self.State.gameplay):
             if(input == b"w"):
@@ -220,22 +219,19 @@ class TikTakToe:
         self.__cells[currCell[0]][currCell[1]].setColorRegister(colorRegister={} , defaultColor=self.__selectedStatus)
 
 
-        for i in range(3):
-            for j in range(3):
-                self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__cells[i][j].getOccupiedCoords())
+        
 
-        for entity in self.__entities:
-            self.__windowHandler.handleOccupiedCoords(occupiedCoords=entity.getOccupiedCoords())
-
-        self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.border.getOccupiedCoords())
-
-        for item in self.__endScreenEntities:
-            self.__windowHandler.handleOccupiedCoords(occupiedCoords=item.getOccupiedCoords())
-
-        copy = self.__reqs[:]
-        self.__reqs.clear()
-        return copy
 
     def render(self):
-        self.__windowHandler.render()
+        for i in range(3):
+            for j in range(3):
+                self.__windowHandler.draw(occupiedCoords=self.__cells[i][j].getOccupiedCoords())
+        
+        for entity in self.__entities:
+            self.__windowHandler.draw(occupiedCoords=entity.getOccupiedCoords())
+
+        self.__windowHandler.draw(occupiedCoords=self.border.getOccupiedCoords())
+
+        for item in self.__endScreenEntities:
+            self.__windowHandler.draw(occupiedCoords=item.getOccupiedCoords())
     

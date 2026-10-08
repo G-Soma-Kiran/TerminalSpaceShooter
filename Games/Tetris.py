@@ -1,9 +1,10 @@
 import Engine.helpers as h
+import Engine.scene as scene
 from enum import Enum
 import random as rnd
 
 _GRID_SIZE = (40, 26)      # (width in CHARACTERS, height in ROWS). One cell = 2 chars wide, 1 row tall.
-_GRID_POS = ()             # terminal (row, col) of the board's top-left, set in Tetris.__init__
+_GRID_POS = (2,2)             # terminal (row, col) of the board's top-left, set in Tetris.__init__
 
 _SPAWN_ROW = 1             # spawn row, relative to the top of the board (piece is visible immediately).Value is set to 1 beacuse all pieces have pivot as the second block. Although Z and S have a problem with this.
 _GRAVITY_BASE = 0.5        # seconds per automatic step down at level 1
@@ -66,7 +67,7 @@ _COLORS = {
 }
 
 
-class Tetris:
+class Tetris(scene.Scene):
 
     class Block:
 
@@ -206,28 +207,13 @@ class Tetris:
         def getOccupiedCoords(self):
             return [sprite.getOccupiedCoords() for sprite in self.__individualSprites]
 
-    def renderBelow(self):
-        return self.__renderBelow
 
-    def updateBelow(self):
-        return self.__updateBelow
-
-    def __init__(self, *, windowHandler, assetManager, animationRegistry):
-        self.__windowHandler = windowHandler
-        self.__assetManager = assetManager
-        self.__animationRegistry = animationRegistry
-
-        self.__reqs = []
-        self.__renderBelow = False
-        self.__updateBelow = False
+    def _onCreate(self):
+        self.__windowHandler = self._systems.getWindow()
+        self.__assetManager = self._systems.getAssetManager()
+        self.__animationRegistry = self._systems.getAnimationRegistry()
 
         self.__previousTime = 0
-
-        global _GRID_POS
-        _GRID_POS = (
-            (self.__windowHandler.getWindowSize()[1] // 2) - (_GRID_SIZE[1] // 2),
-            (self.__windowHandler.getWindowSize()[0] // 2) - (_GRID_SIZE[0] // 2)
-        )
 
         self.__score = 0
         self.__lines = 0
@@ -240,6 +226,9 @@ class Tetris:
         self.__grid = [[None] * (_GRID_SIZE[0] // 2) for _ in range(_GRID_SIZE[1])]
 
         self.__setupExtras()
+        
+        currWindowSize = self.__windowHandler.getWindowSize()
+        self.setView(view=h.View(viewPosition=(1,1) , viewDimensions=(_GRID_SIZE[0]+2+21 , _GRID_SIZE[1]+2) , viewPortPos=((currWindowSize[1]//2) - (_GRID_SIZE[1] // 2),(currWindowSize[0]//2) - (_GRID_SIZE[0] // 2)) , viewPortDimensions=(_GRID_SIZE[0]+2+21 , _GRID_SIZE[1]+2)))
 
         self.__nextType = self.__drawFromBag()
         self.__spawn(0)
@@ -368,13 +357,21 @@ class Tetris:
 
     def handleInput(self, *, input, time):
         if input == b"p":
-            self.__reqs.append((h.Request.popAndSave, None))
-            self.__reqs.append((h.Request.push, "TikTakToe"))
+            self.popAndSave()
+            self.pushScene(sceneName="TikTakToe")
             return
 
         if input == b"\x1b":
-            self.__reqs.append((h.Request.pop, None))
+            self.popScene()
             return
+        elif (input == b"resize"):
+            currWindowSize = self.__windowHandler.getWindowSize()
+            self.getView().setViewPortPosition(viewPortPosition=
+            (
+                (currWindowSize[1]//2) - (_GRID_SIZE[1] // 2),
+                (currWindowSize[0]//2) - (_GRID_SIZE[0] // 2)
+            )
+                                            )
 
         if self.__over:
             if input == b"\r":
@@ -412,9 +409,6 @@ class Tetris:
             if self.__activeBlock.update():   # True once the piece has settled
                 self.__lock(time)
 
-        copy = self.__reqs[:]
-        self.__reqs.clear()
-        return copy
 
     def __hudCoords(self):
         top = _GRID_POS[0]
@@ -445,15 +439,14 @@ class Tetris:
         return coords
 
     def render(self):
-        self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__backgroundCoords)
-        self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__borderCoords)
-        self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__boardCoords)
+        self.__windowHandler.draw(occupiedCoords=self.__backgroundCoords)
+        self.__windowHandler.draw(occupiedCoords=self.__borderCoords)
+        self.__windowHandler.draw(occupiedCoords=self.__boardCoords)
 
         if self.__activeBlock is not None:
-            self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__activeBlock.getGhostCoords())
+            self.__windowHandler.draw(occupiedCoords=self.__activeBlock.getGhostCoords())
             for coord in self.__activeBlock.getOccupiedCoords():
-                self.__windowHandler.handleOccupiedCoords(occupiedCoords=coord)
+                self.__windowHandler.draw(occupiedCoords=coord)
 
-        self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__hudCoords())
-        self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__nextRectCoords)
-        self.__windowHandler.render()
+        self.__windowHandler.draw(occupiedCoords=self.__hudCoords())
+        self.__windowHandler.draw(occupiedCoords=self.__nextRectCoords)

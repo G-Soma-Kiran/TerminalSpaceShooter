@@ -3,153 +3,29 @@ import msvcrt as Input
 import Engine.helpers as h
 import sys
 import shutil as shell
-import Engine.window_handler as window
+import Engine._window_handler as window
+import Engine._asset_manager as asset
+import Engine._animation_registry as animations
+import Engine._scenemanager as sm
+import Engine._subsystem as subsystem
 
 class Game:
 
-    class AssetManager:
-
-        def __init__(self):
-            self.__allTextures = {}
-            self.__allTexturesByPath = {}
-
-        def importTextures(self , **kwargs):
-            for textureName , filepath in kwargs.items():
-                if( textureName in self.__allTextures ):
-                    raise ValueError(f"{textureName} is already assetManager.__allTextures")
-
-
-                temp = self.__allTexturesByPath.get(filepath)
-
-                if( temp != None ):
-                    self.__allTextures[textureName] = self.__allTexturesByPath[filepath]
-                    continue
-
-                with open(filepath , "r" , encoding="utf-8") as file:
-                    temp = file.read()
-                    self.__allTextures[textureName] = temp
-                    self.__allTexturesByPath[filepath] = temp
-
-        def getTexture(self , * , textureName):
-            val = self.__allTextures.get(textureName)
-
-            if(val == None):
-                raise ValueError(f"{textureName} is not present => getTexture()")
-            
-            return val
-        
-    class Animations:
-        def __init__(self):
-            self.__allAnimations= {}
-
-        def createAnimation(self , * , animationName ):
-            if(animationName in self.__allAnimations.keys()):
-                raise ValueError(f"{animationName} is already in animationRegistry.allAnimations")
-    
-            self.__allAnimations[animationName] = []
-
-        def addFrame(self , * , animationName , texture , colorRegister , textureRect , dimensions):
-            if(animationName not in self.__allAnimations.keys()):
-                raise ValueError(f"{animationName} is not in animationRegistry.addFrame")
-            self.__allAnimations[animationName].append((texture , colorRegister , textureRect , dimensions))
-
-        def getAnimation(self , * , animationName):
-            if(animationName not in self.__allAnimations.keys()):
-                raise ValueError(f"{animationName} is not in animationRegistry.addFrame")
-            return tuple(self.__allAnimations[animationName])
-
-    class SceneManager:
-        
-        def __init__(self , * , defaultScene  , windowHandler , assetManager , animationRegistry):
-            self.__windowHandler = windowHandler 
-            self.__assetManager = assetManager
-            self.__animationRegistry = animationRegistry
-            self.__sceneStack = []
-            self.__requests = [(h.Request.push , defaultScene)]
-            self.__sceneRegistry = {}
-            self.__persistentScenes = {}
-
-        def registerScene(self , *args):
-            for scene in args:
-                if(scene.__name__ in self.__sceneRegistry.keys()):
-                    raise ValueError(f"{scene} already exists in sceneRegistry")
-                self.__sceneRegistry[scene.__name__] = scene
-            
-
-        def __createScene(self , * , sceneName):
-            return self.__sceneRegistry[sceneName](windowHandler=self.__windowHandler , assetManager=self.__assetManager , animationRegistry=self.__animationRegistry)
-        
-        def __push(self , * , sceneName):
-            if(self.__persistentScenes.get(sceneName) != None ):
-                self.__sceneStack.append(self.__persistentScenes.pop(sceneName))
-            else:
-                self.__sceneStack.append(self.__createScene(sceneName=sceneName))
-
-        def __pop(self):
-            self.__sceneStack.pop()
-
-        def __saveAndPop(self):
-            self.__persistentScenes[type(self.__sceneStack[-1]).__name__] = self.__sceneStack[-1]
-            self.__sceneStack.pop()
-
-        def __replaceWith(self , * , sceneName):
-            self.__pop()
-            self.__push(sceneName=sceneName)
-
-        def __switchTo(self , *,sceneName):
-            self.__saveAndPop()
-            self.__push(sceneName=sceneName)
-
-        def completeRequests(self):
-            for request , scene in self.__requests:
-                if(request == h.Request.push):
-                    self.__push(sceneName=scene)
-                elif(request == h.Request.pop):
-                    self.__pop()
-                elif(request == h.Request.popAndSave ):
-                    self.__saveAndPop()
-                elif(request == h.Request.replaceWith):
-                    self.__replaceWith(sceneName=scene)
-                elif(request == h.Request.switchTo):
-                    self.__switchTo(sceneName=scene)
-                else:
-                    raise ValueError(f"Unknown scene request: {request}")
-
-            self.__requests.clear()
-
-        def updateScene(self , * , keys , time):
-            for key , t in keys:
-                self.__sceneStack[-1].handleInput(input=key , time=t)
-
-
-            i=len(self.__sceneStack)-1
-            while(i > 0 and self.__sceneStack[i].updateBelow()):
-                i=i-1
-            while(i < len(self.__sceneStack)-1):
-                self.__sceneStack[i].update(time=time)
-                i+=1
-            reqs = self.__sceneStack[-1].update(time = time)
-            self.__requests.extend(reqs)
-
-            i=len(self.__sceneStack)-1
-            while(i > 0 and self.__sceneStack[i].renderBelow()):
-                i-=1
-            while(i < len(self.__sceneStack)-1):
-                self.__sceneStack[i].render()
-                i+=1
-
-            self.__sceneStack[-1].render()
-
-        def isSceneStackEmpty(self):
-            return len(self.__sceneStack) == 0
-
-    def __init__(self , * , defaultScene):
+    def __init__(self , * , defaultScene , viewSize):
         self.__frameNumber = 0
 
-        self.assetManager = self.AssetManager()
-        self.__windowHandler = window.WindowHandler()
-        self.animationRegistry = self.Animations()
-        self.sceneManager = self.SceneManager(defaultScene=defaultScene , windowHandler=self.__windowHandler , assetManager=self.assetManager , animationRegistry=self.animationRegistry)
+        self.__assetManager = asset.AssetManager()
+        self.__windowHandler = window.WindowHandler(viewSize=viewSize)
+        self.__animationRegistry = animations.Animations()
+        self.subsystems:subsystem.SubSystems = subsystem.SubSystems(windowHandler=self.__windowHandler , assetManager=self.__assetManager , animationRegistry=self.__animationRegistry)
+
+        self.__sceneManager = sm.SceneManager(defaultScene=defaultScene ,subsystems=self.subsystems)
+
+    def registerScene(self , *args):
+        self.__sceneManager.registerScene(*args)
+
+    def getSceneInit(self)->subsystem.SubSystems:
+        return self.subsystems
 
     def run(self):
         print("\033[?1049h", end="")
@@ -161,17 +37,26 @@ class Game:
             currentTime = frameStart
             dt = currentTime - previousTime
             previousTime = currentTime
-            self.__windowHandler._WindowHandler__handleTerminalSizeChange(terminalSize=tuple(shell.get_terminal_size()) , time=(T.perf_counter() - loopStart) )
-            self.sceneManager.completeRequests()
-            if(self.sceneManager.isSceneStackEmpty()):
+            windowstate = self.__windowHandler._WindowHandler__handleTerminalSizeChange(terminalSize=tuple(shell.get_terminal_size()) , time=(T.perf_counter() - loopStart) )
+            self.__sceneManager.completeRequests()
+            if(self.__sceneManager.isSceneStackEmpty()):
                 print("\033[?1049l", end="")
                 print("\x1b[?25h", end="")
                 return
             keys=[]
-            while( Input.kbhit()):
-                keys.append((Input.getch() , T.perf_counter() - loopStart))
 
-            self.sceneManager.updateScene(keys=keys , time=(T.perf_counter()- loopStart))
+            if(windowstate == window.windowState.ResizingEnd):
+                keys.append((b"resize" , T.perf_counter() - loopStart))
+
+            while( Input.kbhit()):
+                input = Input.getch()
+                if(windowstate == window.windowState.NoResize or windowstate == window.windowState.ResizingEnd):
+                    keys.append((input , T.perf_counter() - loopStart))
+
+            if(windowstate != window.windowState.NoResize and windowstate != window.windowState.ResizingEnd):
+                T.sleep(0.033)
+                continue
+            self.__sceneManager.updateScene(keys=keys , time=(T.perf_counter()- loopStart))
 
 
             print(f"\x1b[31;3H", end="")

@@ -1,5 +1,5 @@
 import Engine.helpers as h
-import Engine.engine
+import Engine.scene as scene
 from enum import Enum
 import random as rnd
 from math import ceil
@@ -15,13 +15,7 @@ _VERTICAL_SPACING = 2 * _BIRD_WIDTH
 _HORIZONTAL_SPACING = 5 * _BIRD_WIDTH
 _TOTAL_PILLAR_PAIRS = ceil(_GAME_SCREEN_SIZE[0]/(_PILLAR_WIDTH+_HORIZONTAL_SPACING))
 
-class FlappyBird: 
-
-    def renderBelow(self):
-        return self.__renderBelow
-
-    def updateBelow(self):
-        return self.__updateBelow
+class FlappyBird(scene.Scene): 
 
     def __setUpExtras(self):
         border = h.Sprite(h.rectangle(dimensions=(_GAME_SCREEN_SIZE[0] + 2, _GAME_SCREEN_SIZE[1] + 2)), colorRegister={}, textureRectPosition=(1, 1),
@@ -71,23 +65,22 @@ class FlappyBird:
             self.__pillars[i][0].setPosition((newX , newY))
             self.__pillars[i][1].setPosition((newX+_VERTICAL_SPACING+_GAME_SCREEN_SIZE[1] , newY))
 
-    def __init__(self , * , windowHandler:Engine.engine.window.WindowHandler, assetManager:Engine.engine.Game.AssetManager , animationRegistry:Engine.engine.Game.Animations):
-        self.__windowHandler = windowHandler
-        self.__assetmanager = assetManager
-        self.__animationsRegistry = animationRegistry
+    def _onCreate(self):
+        
+        self.__windowHandler = self._systems.getWindow()
+        self.__assetmanager = self._systems.getAssetManager()
+        self.__animationsRegistry = self._systems.getAnimationRegistry()
 
-        self.__isPaused = False
 
-        self.__reqs=[]
-        self.__renderBelow = False
-        self.__updateBelow = False
 
 
         global _GAME_SCREEN_POS
         _GAME_SCREEN_POS=(
-            (self.__windowHandler.getWindowSize()[1] // 2) - (_GAME_SCREEN_SIZE[1] // 2),
-            (self.__windowHandler.getWindowSize()[0] // 2) - (_GAME_SCREEN_SIZE[0] // 2)
+            (32//2) - (_GAME_SCREEN_SIZE[1] // 2),
+            (162//2) - (_GAME_SCREEN_SIZE[0] // 2)
         )
+
+        self.setView(view=h.View(viewPosition = (_GAME_SCREEN_POS[0]-1 , _GAME_SCREEN_POS[1]-1) , viewDimensions=(_GAME_SCREEN_SIZE[0]+2 , _GAME_SCREEN_SIZE[1]+2) , viewPortPos=(_GAME_SCREEN_POS[0]-1 , _GAME_SCREEN_POS[1]-1) , viewPortDimensions=(_GAME_SCREEN_SIZE[0]+2 , _GAME_SCREEN_SIZE[1]+2)))
 
         self.__setUpExtras()
         
@@ -123,14 +116,23 @@ class FlappyBird:
     def handleInput(self , * , input , time):
 
         if(input == b"p"):
-            self.__reqs.append((h.Request.popAndSave , None))
-            self.__reqs.append((h.Request.push , "Tetris"))
+            self.popAndSave()
+            self.pushScene(sceneName="Tetris")
         
         elif(input == b'\x1b'):
-            self.__reqs.append((h.Request.pop,None))
+            self.popScene()
+
+        elif (input == b"resize"):
+            currWindowSize = self.__windowHandler.getWindowSize()
+            self.getView().setViewPortPosition(viewPortPosition=
+                                            (
+            (currWindowSize[1]//2) - (_GAME_SCREEN_SIZE[1] // 2)-1,
+            (currWindowSize[0]//2) - (_GAME_SCREEN_SIZE[0] // 2)-1
+        )
+                                            )
 
         elif(input == b"m"):
-            self.__isPaused = not self.__isPaused
+            self.setPause(not self.getPause())
 
         elif(input == b" "):
             currPos = self.__bird.getPosition()
@@ -140,10 +142,6 @@ class FlappyBird:
             self.__previousBirdDropTime+=0.05
 
     def update(self , * , time):
-        if(self.__isPaused):
-            copy = self.__reqs[:]
-            self.__reqs.clear()
-            return copy
 
         if(time - self.__previousPillarUpdateTime >= 0.015):
             self.__previousPillarUpdateTime = time
@@ -169,16 +167,12 @@ class FlappyBird:
             or
             h.isColliding(rect1Pos=birdCollisionRectPos , rect1Dimensions=birdCollisionRectDimensions , rect2Pos=pillar2CollisionRectPos , rect2Dimensions=pillar2CollisionRectDimensions)
             ):
-            self.__isPaused = True
+            self.setPause(True)
 
-        copy = self.__reqs[:]
-        self.__reqs.clear()
-        return copy
     
     def render(self):
-        self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__borderCoords)
+        self.__windowHandler.draw(occupiedCoords=self.__borderCoords)
         for i in range(_TOTAL_PILLAR_PAIRS):
-            self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__pillars[i][0].getOccupiedCoords())
-            self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__pillars[i][1].getOccupiedCoords())
-        self.__windowHandler.handleOccupiedCoords(occupiedCoords=self.__bird.getOccupiedCoords())
-        self.__windowHandler.render()
+            self.__windowHandler.draw(occupiedCoords=self.__pillars[i][0].getOccupiedCoords())
+            self.__windowHandler.draw(occupiedCoords=self.__pillars[i][1].getOccupiedCoords())
+        self.__windowHandler.draw(occupiedCoords=self.__bird.getOccupiedCoords())
